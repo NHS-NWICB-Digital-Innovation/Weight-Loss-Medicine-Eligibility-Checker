@@ -1,6 +1,8 @@
 # NHS Weight Loss Medicine Eligibility Checker
 
-An interactive web-based tool for assessing potential eligibility for tirzepatide (Mounjaro) weight management treatment under NHS England's phased rollout programme.
+An interactive web-based tool for assessing potential eligibility for tirzepatide (Mounjaro) weight management treatment under NHS England's phased rollout programme. 
+
+[View example](https://andy.charlwood.xyz/widget/NHSEligibilityChecker.html),  note this is hosted on a personal website and is for demonstration purposes only, it should not be embedded on any NHS website. Please follow the instructions below.
 
 ## Overview
 
