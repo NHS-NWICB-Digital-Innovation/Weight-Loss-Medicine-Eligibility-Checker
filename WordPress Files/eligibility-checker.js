@@ -17,6 +17,18 @@ let ageBasedIneligible = false;
 
 const steps = ['start', 'age', 'ethnicity', 'bmi', 'comorbidities', 'previousAttempts', 'result'];
 
+const COHORT_START_DATES = {
+    cohort1: new Date('2025-06-23'),
+    cohort2: new Date('2026-06-23'),
+    cohort3: new Date('2027-03-23')
+};
+
+const COHORT_TIMEFRAMES = {
+    cohort1: 'summer 2025',
+    cohort2: 'summer 2026',
+    cohort3: 'spring 2027'
+};
+
 function getAdjustedBmiThreshold(threshold) {
     const lowerThresholdEthnicities = ['south_asian', 'chinese', 'other_asian', 'middle_eastern', 'black_african', 'african_caribbean'];
     if (answers.ethnicity && lowerThresholdEthnicities.includes(answers.ethnicity)) {
@@ -496,7 +508,7 @@ function updateResult() {
 
     const timelineBox = document.querySelector('.timeline-box');
     if (timelineBox) {
-        if (eligibilityResult.eligible && eligibilityResult.cohort === "1") {
+        if (eligibilityResult.eligible && eligibilityResult.isActive) {
             timelineBox.style.display = 'none';
         } else {
             timelineBox.style.display = 'block';
@@ -505,9 +517,9 @@ function updateResult() {
 
     let resultClass = 'warning';
     if (eligibilityResult.eligible) {
-        if (eligibilityResult.cohort === '1') {
+        if (eligibilityResult.isActive) {
             resultClass = 'success';
-        } else if (eligibilityResult.cohort === '2' || eligibilityResult.cohort === '3') {
+        } else {
             resultClass = 'orange';
         }
     }
@@ -516,10 +528,11 @@ function updateResult() {
     let html = '<div class="result-box ' + resultClass + '">';
     html += '<h3>';
     if (eligibilityResult.eligible) {
-        html += 'You may be eligible for tirzepatide';
-        if (eligibilityResult.cohort !== '1') {
-            html += ' in the future';
-        };
+        if (eligibilityResult.isActive) {
+            html += 'You may be eligible for tirzepatide';
+        } else {
+            html += 'You may be eligible for tirzepatide in the future';
+        }
     } else {
         html += 'You may not currently be eligible for tirzepatide (Mounjaro)';
     }
@@ -560,20 +573,18 @@ function updateResult() {
         html += '<div class="cohort-info">';
         html += '<p><strong>Cohort ' + eligibilityResult.cohort + ' - ' + eligibilityResult.year + '</strong></p>';
         html += '<p style="margin-top: 8px;">';
-        html += 'You meet the criteria for ' + eligibilityResult.year + ' with ' + comorbidityCount + ' qualifying ';
+        html += 'You may meet the criteria for ' + eligibilityResult.year + ' with ' + comorbidityCount + ' qualifying ';
         html += 'conditions and a BMI of ' + answers.bmi + '.';
         html += '</p>';
         html += '<p style="margin-top: 8px;">';
 
-        if (eligibilityResult.cohort === '1') {
+        if (eligibilityResult.isActive) {
             html += '<strong>Next steps:</strong> Speak with your GP about your weight management ';
             html += 'options. Access to tirzepatide is subject to the phased rollout ';
             html += 'and local service capacity.';
-        } else if (eligibilityResult.cohort === '2') {
-            html += '<strong>Next steps:</strong> You may be eligible from June 2026. Access will be subject to the phased rollout ';
-            html += 'and local service capacity. Discuss with your GP closer to this time if appropriate.';
-        } else if (eligibilityResult.cohort === '3') {
-            html += '<strong>Next steps:</strong> You may be eligible from April 2027. Access will be subject to the phased rollout ';
+        } else {
+            html += '<strong>Expected timeframe:</strong> From ' + eligibilityResult.timeframe + '<br>';
+            html += '<strong>Next steps:</strong> You may be eligible from this timeframe. Access will be subject to the phased rollout ';
             html += 'and local service capacity. Discuss with your GP closer to this time if appropriate.';
         }
 
@@ -610,32 +621,55 @@ function determineEligibilityAndCohort() {
     const hasMadePreviousAttempts = answers.previousAttempts;
     const comorbidityCount = countQualifyingComorbidities();
     const bmi = answers.bmi;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to midnight for accurate date comparison
 
     if (!bmi || bmi <=0) {
-        return { eligible: false, cohort: null, year: null };
+        return { eligible: false, cohort: null, year: null, isActive: false };
     }
 
     if (hasMadePreviousAttempts === false) {
-        return { eligible: false, cohort: null, year: null, reason: "previousAttempts" };
+        return { eligible: false, cohort: null, year: null, reason: "previousAttempts", isActive: false };
     }
 
     const year1BmiThreshold = getAdjustedBmiThreshold(40);
     if (comorbidityCount >= 4 && bmi >= year1BmiThreshold && hasMadePreviousAttempts) {
-        return { eligible: true, cohort: "1", year: "Year 1 (2025/26)"};
+        const isActive = today >= COHORT_START_DATES.cohort1;
+        return {
+            eligible: true,
+            cohort: "1",
+            year: "Year 1 (2025/26)",
+            isActive: isActive,
+            timeframe: COHORT_TIMEFRAMES.cohort1
+        };
     }
 
     const year2LowerBmi = getAdjustedBmiThreshold(35);
     const year2UpperBmi = getAdjustedBmiThreshold(39.9);
     if (comorbidityCount >= 4 && bmi >= year2LowerBmi && bmi <= year2UpperBmi && hasMadePreviousAttempts) {
-        return { eligible: true, cohort: "2", year: "Year 2 (2026/27)"};
+        const isActive = today >= COHORT_START_DATES.cohort2;
+        return {
+            eligible: true,
+            cohort: "2",
+            year: "Year 2 (2026/27)",
+            isActive: isActive,
+            timeframe: COHORT_TIMEFRAMES.cohort2
+        };
     }
 
     const year3BmiThreshold = getAdjustedBmiThreshold(40);
     if (comorbidityCount === 3 && bmi >= year3BmiThreshold && hasMadePreviousAttempts) {
-        return { eligible: true, cohort: "3", year: "Year 3 (2027/28)"};
+        const isActive = today >= COHORT_START_DATES.cohort3;
+        return {
+            eligible: true,
+            cohort: "3",
+            year: "Year 3 (2027/28)",
+            isActive: isActive,
+            timeframe: COHORT_TIMEFRAMES.cohort3
+        };
     }
 
-    return { eligible: false, cohort: null, year: null };
+    return { eligible: false, cohort: null, year: null, isActive: false };
 }
 
 
